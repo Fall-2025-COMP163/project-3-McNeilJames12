@@ -116,7 +116,7 @@ def load_quests(filename="data/quests.txt"):
         quest_id = fields["QUEST_ID"]
 
         quest_data = {
-            "id": quest_id,
+            "quest_id": quest_id,
             "title": fields["TITLE"],
             "description": fields["DESCRIPTION"],
             "reward_xp": reward_xp,
