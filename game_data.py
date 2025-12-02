@@ -9,8 +9,6 @@ AI Usage: [Document any AI assistance used]
 This module handles loading and validating game data from text files.
 """
 
-
-
 import os
 from custom_exceptions import (
     InvalidDataFormatError,
@@ -116,7 +114,7 @@ def load_quests(filename="data/quests.txt"):
         quest_id = fields["QUEST_ID"]
 
         quest_data = {
-            "quest_id": quest_id,
+            "quest_id": quest_id,  # <- tests expect this key
             "title": fields["TITLE"],
             "description": fields["DESCRIPTION"],
             "reward_xp": reward_xp,
@@ -227,7 +225,8 @@ def load_items(filename="data/items.txt"):
         item_id = fields["ITEM_ID"]
 
         item_data = {
-            "id": item_id,
+            # NOTE: tests & validators expect 'item_id', not 'id'
+            "item_id": item_id,
             "name": fields["NAME"],
             "type": fields["TYPE"],
             "effect": {
@@ -243,13 +242,17 @@ def load_items(filename="data/items.txt"):
     return items
 
 
+# ============================================================================
+# VALIDATION FUNCTIONS
+# ============================================================================
+
 def validate_quest_data(quest_dict):
     """
     Validate that quest dictionary has all required fields
-    
-    Required fields: quest_id, title, description, reward_xp, 
+
+    Required fields: quest_id, title, description, reward_xp,
                     reward_gold, required_level, prerequisite
-    
+
     Returns: True if valid
     Raises: InvalidDataFormatError if missing required fields
     """
@@ -279,8 +282,6 @@ def validate_quest_data(quest_dict):
             )
 
     return True
-
-
 
 
 def validate_item_data(item_dict):
@@ -336,6 +337,9 @@ def validate_item_data(item_dict):
     return True
 
 
+# ============================================================================
+# DEFAULT DATA CREATION
+# ============================================================================
 
 def create_default_data_files():
     """
@@ -556,15 +560,56 @@ def parse_item_block(lines):
 
 
 # ============================================================================
+# HIGH-LEVEL GAME DATA LOADER
+# ============================================================================
+
+def load_game_data():
+    """
+    High-level helper to create default files (if needed),
+    load quests and items, validate them, and return a single
+    dictionary for the rest of the game to use.
+
+    Returns:
+        dict with at least:
+            {
+                "quests": {quest_id: quest_dict, ...},
+                "items": {item_id: item_dict, ...}
+            }
+
+    Raises:
+        MissingDataFileError, InvalidDataFormatError, CorruptedDataError
+    """
+    # Ensure data directory/files exist so first run works smoothly
+    create_default_data_files()
+
+    # Load raw data
+    quests = load_quests()
+    items = load_items()
+
+    # Validate all quests and items
+    for q in quests.values():
+        validate_quest_data(q)
+
+    for it in items.values():
+        validate_item_data(it)
+
+    # The integration tests are likely expecting this structure:
+    return {
+        "quests": quests,
+        "items": items
+    }
+
+
+# ============================================================================
 # TESTING
 # ============================================================================
 
 if __name__ == "__main__":
     print("=== GAME DATA MODULE TEST ===")
-    
+
     # Test creating default files
     # create_default_data_files()
-    
+
     # Test loading quests
     try:
         quests = load_quests()
@@ -573,7 +618,7 @@ if __name__ == "__main__":
         print("Quest file not found")
     except InvalidDataFormatError as e:
         print(f"Invalid quest format: {e}")
-    
+
     # Test loading items
     try:
         items = load_items()
@@ -582,4 +627,3 @@ if __name__ == "__main__":
         print("Item file not found")
     except InvalidDataFormatError as e:
         print(f"Invalid item format: {e}")
-
