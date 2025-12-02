@@ -129,61 +129,66 @@ def clear_inventory(character):
 def use_item(character, item_id, item_data):
     """
     Use a consumable item from inventory
-    
+
     Args:
         character: Character dictionary
         item_id: Item to use
         item_data: Item information dictionary from game_data
-    
+
     Item types and effects:
     - consumable: Apply effect and remove from inventory
     - weapon/armor: Cannot be "used", only equipped
-    
+
     Returns: String describing what happened
-    Raises: 
+    Raises:
         ItemNotFoundError if item not in inventory
         InvalidItemTypeError if item type is not 'consumable'
     """
-    # TODO: Implement item usage
     # Check if character has the item
     inventory = character.get("inventory", [])
     if item_id not in inventory:
         raise ItemNotFoundError(f"Item '{item_id}' not in inventory.")
 
     # Check if item type is 'consumable'
-    if item_data["type"] != "consumable":
+    if item_data.get("type") != "consumable":
         raise InvalidItemTypeError(f"Item '{item_id}' is not a consumable.")
 
-    # Parse effect (format: "stat_name:value" e.g., "health:20")
-    stat_name = item_data["effect"]["stat"]
-    stat_value = item_data["effect"]["value"]
-    message = ""
+    # Effect can be either:
+    # - a dict: {"stat": ..., "value": ...}
+    # - a string: "stat:value" (e.g., "health:20")
+    effect = item_data.get("effect")
+    if isinstance(effect, dict):
+        stat_name = effect.get("stat")
+        stat_value = effect.get("value", 0)
+    elif isinstance(effect, str):
+        # Use helper to parse "health:20" → ("health", 20)
+        stat_name, stat_value = parse_item_effect(effect)
+    else:
+        raise ValueError(f"Invalid effect data for item '{item_id}': {effect!r}")
+
+    # Default message
+    item_name = item_data.get("name", item_id)
+    char_name = character.get("name", "Character")
 
     # Apply effect to character
     if stat_name == "health":
-        before = character["health"]
-        character["health"] = min(
-            character["health"] + stat_value,
-            character["max_health"]
-        )
+        before = character.get("health", 0)
+        # Ensure we don't go over max_health if it exists
+        max_health = character.get("max_health", before + stat_value)
+        character["health"] = min(before + stat_value, max_health)
         healed = character["health"] - before
-        message = f"{character['name']} used {item_data['name']} and healed {healed} HP."
-
-    elif stat_name in ["strength", "magic"]:
-        # Temporary stat boosts or buffs could be implemented here.
-        # For now, we apply permanent buff (simple version).
-        character[stat_name] += stat_value
-        message = f"{character['name']} used {item_data['name']} and gained +{stat_value} {stat_name}."
-
+        message = f"{char_name} used {item_name} and healed {healed} HP."
     else:
-        # Unknown stat
-        message = f"{character['name']} used {item_data['name']} but nothing happened."
+        # For other stats, use helper so we respect max_health rules, etc.
+        apply_stat_effect(character, stat_name, stat_value)
+        message = f"{char_name} used {item_name} and gained +{stat_value} {stat_name}."
 
     # Remove item from inventory
     inventory.remove(item_id)
     character["inventory"] = inventory
 
     return message
+
 
 def equip_weapon(character, item_id, item_data):
     """
