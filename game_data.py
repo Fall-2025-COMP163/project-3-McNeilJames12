@@ -187,40 +187,57 @@ def validate_item_data(item_dict):
 
     # Validate type
     valid_types = ["weapon", "armor", "consumable"]
-
     if item_dict["type"] not in valid_types:
         raise InvalidDataFormatError(
-            f"Invalid item type '{item_dict['type']}'. "
-            f"Must be one of: {valid_types}"
+            f"Invalid item type '{item_dict['type']}'. Must be one of: {valid_types}"
         )
 
     # Validate numeric cost
     if not isinstance(item_dict["cost"], (int, float)):
         raise InvalidDataFormatError(
-            f"Item cost must be numeric, "
-            f"got {type(item_dict['cost']).__name__}"
+            f"Item cost must be numeric, got {type(item_dict['cost']).__name__}"
         )
 
-    # Validate effect dictionary
+    # Validate effect – allow either dict or "stat:value" string
     effect = item_dict["effect"]
 
-    if not isinstance(effect, dict):
-        raise InvalidDataFormatError("Item effect must be a dictionary.")
+    if isinstance(effect, dict):
+        # Effect must contain 'stat' and 'value'
+        if "stat" not in effect or "value" not in effect:
+            raise InvalidDataFormatError(
+                "Item effect must contain 'stat' and 'value' keys."
+            )
+        # Effect value must be numeric
+        if not isinstance(effect["value"], (int, float)):
+            raise InvalidDataFormatError(
+                f"Item effect value must be numeric, got {type(effect['value']).__name__}"
+            )
 
-    # Effect must contain 'stat' and 'value'
-    if "stat" not in effect or "value" not in effect:
-        raise InvalidDataFormatError(
-            "Item effect must contain 'stat' and 'value' keys."
-        )
+    elif isinstance(effect, str):
+        # Expect format "stat:value"
+        if ":" not in effect:
+            raise InvalidDataFormatError(
+                f"Invalid EFFECT format (expected 'stat:value'): {effect}"
+            )
+        stat_name, stat_value_str = effect.split(":", 1)
+        stat_name = stat_name.strip()
+        stat_value_str = stat_value_str.strip()
+        if not stat_name:
+            raise InvalidDataFormatError("EFFECT stat name cannot be empty.")
+        try:
+            int(stat_value_str)
+        except ValueError as e:
+            raise InvalidDataFormatError(f"Invalid EFFECT value: {e}")
+        # We don't *have* to mutate item_dict here, but it's safe to normalize:
+        # item_dict["effect"] = {"stat": stat_name, "value": int(stat_value_str)}
 
-    # Effect value must be numeric
-    if not isinstance(effect["value"], (int, float)):
+    else:
         raise InvalidDataFormatError(
-            f"Item effect value must be numeric, "
-            f"got {type(effect['value']).__name__}"
+            "Item effect must be a dictionary or 'stat:value' string."
         )
 
     return True
+
 
 
 # ============================================================================
@@ -496,10 +513,7 @@ def load_game_data():
 if __name__ == "__main__":
     print("=== GAME DATA MODULE TEST ===")
 
-    # Test creating default files
-    # create_default_data_files()
 
-    # Test loading quests
     try:
         quests = load_quests()
         print(f"Loaded {len(quests)} quests")
