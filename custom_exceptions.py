@@ -5,6 +5,8 @@ Custom Exception Definitions
 This module defines all custom exceptions used throughout the game.
 """
 
+
+
 # ============================================================================
 # BASE GAME EXCEPTIONS
 # ============================================================================
