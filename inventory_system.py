@@ -191,49 +191,20 @@ def use_item(character, item_id, item_data):
 
 
 def equip_weapon(character, item_id, item_data):
-    """
-    Equip a weapon
-    
-    Args:
-        character: Character dictionary
-        item_id: Weapon to equip
-        item_data: Item information dictionary
-    
-    Weapon effect format: "strength:5" (adds 5 to strength)
-    
-    If character already has weapon equipped:
-    - Unequip current weapon (remove bonus)
-    - Add old weapon back to inventory
-    
-    Returns: String describing equipment change
-    Raises:
-        ItemNotFoundError if item not in inventory
-        InvalidItemTypeError if item type is not 'weapon'
-    """
-    # TODO: Implement weapon equipping
-    inventory = character.get("inventory", [])
-
-    # Check item exists and is type 'weapon'
-    if item_id not in inventory:
-        raise ItemNotFoundError(f"Item '{item_id}' not in inventory.")
-
-    if item_data.get("type") != "weapon":
-        raise InvalidItemTypeError(f"Item '{item_id}' is not a weapon.")
-
-    # Handle unequipping current weapon if exists
-    old_weapon_id = character.get("equipped_weapon")
-    old_weapon_bonus = character.get("equipped_weapon_bonus", 0)
-
-    if old_weapon_id is not None:
-        # Remove old bonus
-        character["strength"] -= old_weapon_bonus
-        # Add old weapon back to inventory
-        inventory.append(old_weapon_id)
-
+    ...
     # Parse effect and apply to character stats
     effect = item_data.get("effect", {})
-    stat_name = effect.get("stat")
-    stat_value = effect.get("value", 0)
+
+    # effect can be either a dict {"stat": ..., "value": ...}
+    # or a string "stat:value" (e.g. "strength:5")
+    if isinstance(effect, dict):
+        stat_name = effect.get("stat")
+        stat_value = effect.get("value", 0)
+    elif isinstance(effect, str):
+        # Use helper to parse "strength:5" → ("strength", 5)
+        stat_name, stat_value = parse_item_effect(effect)
+    else:
+        raise ValueError(f"Invalid effect data for item '{item_id}': {effect!r}")
 
     # For this project, weapon stat should be strength
     if stat_name == "strength":
@@ -242,80 +213,35 @@ def equip_weapon(character, item_id, item_data):
         # If some other stat is used, still apply it generically
         if stat_name in character:
             character[stat_name] += stat_value
+
     # Store equipped_weapon in character dictionary
     character["equipped_weapon"] = item_id
     character["equipped_weapon_bonus"] = stat_value
 
-    # Remove item from inventory
-    inventory.remove(item_id)
-    character["inventory"] = inventory
-
-    if old_weapon_id is None:
-        return f"{character['name']} equipped {item_data['name']}."
-    else:
-        return f"{character['name']} swapped {old_weapon_id} for {item_data['name']}."
 
 
 
 def equip_armor(character, item_id, item_data):
-    """
-    Equip armor
-
-    Args:
-        character: Character dictionary
-        item_id: Armor to equip
-        item_data: Item information dictionary
-
-    Armor effect format: "max_health:10" (adds 10 to max_health)
-
-    If character already has armor equipped:
-    - Unequip current armor (remove bonus)
-    - Add old armor back to inventory
-
-    Returns: String describing equipment change
-    Raises:
-        ItemNotFoundError if item not in inventory
-        InvalidItemTypeError if item type is not 'armor'
-    """
-    # TODO: Implement armor equipping
-    # Similar to equip_weapon but for armor
-
-    inventory = character.get("inventory", [])
-
-    # Check if item exists
-    if item_id not in inventory:
-        raise ItemNotFoundError(f"Item '{item_id}' not in inventory.")
-
-    # Check type
-    if item_data.get("type") != "armor":
-        raise InvalidItemTypeError(f"Item '{item_id}' is not armor.")
-
-    # Handle unequipping current armor if exists
-    old_armor_id = character.get("equipped_armor")
-    old_armor_bonus = character.get("equipped_armor_bonus", 0)
-
-    if old_armor_id is not None:
-        # Remove previous armor's bonus
-        character["max_health"] -= old_armor_bonus
-
-        # Make sure current health doesn't exceed new max
-        if character["health"] > character["max_health"]:
-            character["health"] = character["max_health"]
-
-        # Return old armor to inventory
-        inventory.append(old_armor_id)
-
+    ...
     # Parse effect and apply to character stats
     effect = item_data.get("effect", {})
-    stat_name = effect.get("stat")
-    stat_value = effect.get("value", 0)
+
+    # effect can be either a dict {"stat": ..., "value": ...}
+    # or a string "stat:value" (e.g. "max_health:10")
+    if isinstance(effect, dict):
+        stat_name = effect.get("stat")
+        stat_value = effect.get("value", 0)
+    elif isinstance(effect, str):
+        stat_name, stat_value = parse_item_effect(effect)
+    else:
+        raise ValueError(f"Invalid effect data for item '{item_id}': {effect!r}")
 
     if stat_name == "max_health":
         character["max_health"] += stat_value
 
-        # Optionally auto-heal the difference — depends on assignment rules
-        # Usually we DO NOT heal automatically unless project says otherwise
-
+        # Make sure current health doesn't exceed new max
+        if character["health"] > character["max_health"]:
+            character["health"] = character["max_health"]
     else:
         # Generic stat support, just in case
         if stat_name in character:
@@ -324,15 +250,6 @@ def equip_armor(character, item_id, item_data):
     # Store equipped armor info
     character["equipped_armor"] = item_id
     character["equipped_armor_bonus"] = stat_value
-
-    # Remove armor from inventory
-    inventory.remove(item_id)
-    character["inventory"] = inventory
-
-    if old_armor_id is None:
-        return f"{character['name']} equipped {item_data['name']}."
-    else:
-        return f"{character['name']} swapped {old_armor_id} for {item_data['name']}."
 
 
 
