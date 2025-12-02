@@ -36,12 +36,6 @@ def load_quests(filename="data/quests.txt"):
     Returns: Dictionary of quests {quest_id: quest_data_dict}
     Raises: MissingDataFileError, InvalidDataFormatError, CorruptedDataError
     """
-    # TODO: Implement this function
-    # Must handle:
-    # - FileNotFoundError → raise MissingDataFileError
-    # - Invalid format → raise InvalidDataFormatError
-    # - Corrupted/unreadable data → raise CorruptedDataError
-
     # Read file contents safely
     try:
         with open(filename, "r", encoding="utf-8") as f:
@@ -54,7 +48,9 @@ def load_quests(filename="data/quests.txt"):
 
     # If file is empty or only whitespace, treat as invalid format
     if not content.strip():
-        raise InvalidDataFormatError("Quest data file is empty or contains only whitespace.")
+        raise InvalidDataFormatError(
+            "Quest data file is empty or contains only whitespace."
+        )
 
     quests = {}
 
@@ -65,64 +61,13 @@ def load_quests(filename="data/quests.txt"):
         if not block.strip():
             continue  # skip any accidental extra blank sections
 
-        fields = {}
         lines = block.splitlines()
 
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
+        # Use helper to parse one quest block
+        quest_data = parse_quest_block(lines)
 
-            if ":" not in line:
-                raise InvalidDataFormatError(f"Invalid line (missing colon): {line}")
-
-            key, value = line.split(":", 1)
-            key = key.strip().upper()
-            value = value.strip()
-            fields[key] = value
-
-        # Required keys for each quest block
-        required_keys = [
-            "QUEST_ID",
-            "TITLE",
-            "DESCRIPTION",
-            "REWARD_XP",
-            "REWARD_GOLD",
-            "REQUIRED_LEVEL",
-            "PREREQUISITE",
-        ]
-
-        for key in required_keys:
-            if key not in fields:
-                raise InvalidDataFormatError(f"Missing required field in quest block: {key}")
-
-        # Convert numeric fields
-        try:
-            reward_xp = int(fields["REWARD_XP"])
-            reward_gold = int(fields["REWARD_GOLD"])
-            required_level = int(fields["REQUIRED_LEVEL"])
-        except ValueError as e:
-            raise InvalidDataFormatError(f"Invalid numeric value in quest data: {e}")
-
-        # Handle prerequisite (NONE → None)
-        prereq_raw = fields["PREREQUISITE"]
-        if prereq_raw.upper() == "NONE":
-            prerequisite = None
-        else:
-            prerequisite = prereq_raw
-
-        quest_id = fields["QUEST_ID"]
-
-        quest_data = {
-            "quest_id": quest_id,  # <- tests expect this key
-            "title": fields["TITLE"],
-            "description": fields["DESCRIPTION"],
-            "reward_xp": reward_xp,
-            "reward_gold": reward_gold,
-            "required_level": required_level,
-            "prerequisite": prerequisite,
-        }
-
+        # quest_data already has 'quest_id'
+        quest_id = quest_data["quest_id"]
         quests[quest_id] = quest_data
 
     return quests
@@ -143,9 +88,6 @@ def load_items(filename="data/items.txt"):
     Returns: Dictionary of items {item_id: item_data_dict}
     Raises: MissingDataFileError, InvalidDataFormatError, CorruptedDataError
     """
-    # TODO: Implement this function
-    # Must handle same exceptions as load_quests
-
     # Read file contents safely
     try:
         with open(filename, "r", encoding="utf-8") as f:
@@ -158,7 +100,9 @@ def load_items(filename="data/items.txt"):
 
     # Empty or whitespace-only file → invalid format
     if not content.strip():
-        raise InvalidDataFormatError("Item data file is empty or contains only whitespace.")
+        raise InvalidDataFormatError(
+            "Item data file is empty or contains only whitespace."
+        )
 
     items = {}
 
@@ -169,74 +113,13 @@ def load_items(filename="data/items.txt"):
         if not block.strip():
             continue
 
-        fields = {}
         lines = block.splitlines()
 
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
+        # Use helper to parse one item block
+        item_data = parse_item_block(lines)
 
-            if ":" not in line:
-                raise InvalidDataFormatError(f"Invalid line in item data (missing colon): {line}")
-
-            key, value = line.split(":", 1)
-            key = key.strip().upper()
-            value = value.strip()
-            fields[key] = value
-
-        # Required fields for each item
-        required_keys = [
-            "ITEM_ID",
-            "NAME",
-            "TYPE",
-            "EFFECT",
-            "COST",
-            "DESCRIPTION",
-        ]
-
-        for key in required_keys:
-            if key not in fields:
-                raise InvalidDataFormatError(f"Missing required field in item block: {key}")
-
-        # Parse COST
-        try:
-            cost = int(fields["COST"])
-        except ValueError as e:
-            raise InvalidDataFormatError(f"Invalid COST value in item data: {e}")
-
-        # Parse EFFECT: "stat_name:value"
-        effect_raw = fields["EFFECT"]
-        if ":" not in effect_raw:
-            raise InvalidDataFormatError(f"Invalid EFFECT format (missing colon): {effect_raw}")
-
-        stat_name, stat_value_str = effect_raw.split(":", 1)
-        stat_name = stat_name.strip()
-        stat_value_str = stat_value_str.strip()
-
-        if not stat_name:
-            raise InvalidDataFormatError(f"Invalid EFFECT stat name in item data: {effect_raw}")
-
-        try:
-            stat_value = int(stat_value_str)
-        except ValueError as e:
-            raise InvalidDataFormatError(f"Invalid EFFECT value in item data: {e}")
-
-        item_id = fields["ITEM_ID"]
-
-        item_data = {
-            # NOTE: tests & validators expect 'item_id', not 'id'
-            "item_id": item_id,
-            "name": fields["NAME"],
-            "type": fields["TYPE"],
-            "effect": {
-                "stat": stat_name,
-                "value": stat_value,
-            },
-            "cost": cost,
-            "description": fields["DESCRIPTION"],
-        }
-
+        # item_data already has 'item_id'
+        item_id = item_data["item_id"]
         items[item_id] = item_data
 
     return items
@@ -256,7 +139,6 @@ def validate_quest_data(quest_dict):
     Returns: True if valid
     Raises: InvalidDataFormatError if missing required fields
     """
-    # TODO: Implement validation
     # Check that all required keys exist
     required_fields = [
         "quest_id",
@@ -278,7 +160,8 @@ def validate_quest_data(quest_dict):
     for field in numeric_fields:
         if not isinstance(quest_dict[field], (int, float)):
             raise InvalidDataFormatError(
-                f"Quest field '{field}' must be numeric, got {type(quest_dict[field]).__name__}"
+                f"Quest field '{field}' must be numeric, "
+                f"got {type(quest_dict[field]).__name__}"
             )
 
     return True
@@ -294,8 +177,6 @@ def validate_item_data(item_dict):
     Returns: True if valid
     Raises: InvalidDataFormatError if missing required fields or invalid type
     """
-    # TODO: Implement validation
-
     # Required fields list
     required_fields = ["item_id", "name", "type", "effect", "cost", "description"]
 
@@ -309,13 +190,15 @@ def validate_item_data(item_dict):
 
     if item_dict["type"] not in valid_types:
         raise InvalidDataFormatError(
-            f"Invalid item type '{item_dict['type']}'. Must be one of: {valid_types}"
+            f"Invalid item type '{item_dict['type']}'. "
+            f"Must be one of: {valid_types}"
         )
 
     # Validate numeric cost
     if not isinstance(item_dict["cost"], (int, float)):
         raise InvalidDataFormatError(
-            f"Item cost must be numeric, got {type(item_dict['cost']).__name__}"
+            f"Item cost must be numeric, "
+            f"got {type(item_dict['cost']).__name__}"
         )
 
     # Validate effect dictionary
@@ -326,12 +209,15 @@ def validate_item_data(item_dict):
 
     # Effect must contain 'stat' and 'value'
     if "stat" not in effect or "value" not in effect:
-        raise InvalidDataFormatError("Item effect must contain 'stat' and 'value' keys.")
+        raise InvalidDataFormatError(
+            "Item effect must contain 'stat' and 'value' keys."
+        )
 
     # Effect value must be numeric
     if not isinstance(effect["value"], (int, float)):
         raise InvalidDataFormatError(
-            f"Item effect value must be numeric, got {type(effect['value']).__name__}"
+            f"Item effect value must be numeric, "
+            f"got {type(effect['value']).__name__}"
         )
 
     return True
@@ -346,7 +232,6 @@ def create_default_data_files():
     Create default data files if they don't exist
     This helps with initial setup and testing
     """
-    # TODO: Implement this function
     # Create data/ directory if it doesn't exist
     # Create default quests.txt and items.txt files
     # Handle any file permission errors appropriately
@@ -427,8 +312,7 @@ def parse_quest_block(lines):
     Returns: Dictionary with quest data
     Raises: InvalidDataFormatError if parsing fails
     """
-    # TODO: Implement parsing logic
-    # Split each line on ": " to get key-value pairs
+    # Split each line on ":" to get key-value pairs
     # Convert numeric strings to integers
     # Handle parsing errors gracefully
 
@@ -441,7 +325,9 @@ def parse_quest_block(lines):
 
         # Expect KEY: VALUE format
         if ":" not in line:
-            raise InvalidDataFormatError(f"Invalid line in quest block (missing colon): {line}")
+            raise InvalidDataFormatError(
+                f"Invalid line in quest block (missing colon): {line}"
+            )
 
         key, value = line.split(":", 1)
         key = key.strip().upper()
@@ -497,8 +383,7 @@ def parse_item_block(lines):
     Returns: Dictionary with item data
     Raises: InvalidDataFormatError if parsing fails
     """
-    # TODO: Implement parsing logic
-
+    # Split each line on ":" to get key-value pairs
     data = {}
 
     for line in lines:
@@ -507,7 +392,9 @@ def parse_item_block(lines):
             continue
 
         if ":" not in line:
-            raise InvalidDataFormatError(f"Invalid line in item block (missing colon): {line}")
+            raise InvalidDataFormatError(
+                f"Invalid line in item block (missing colon): {line}"
+            )
 
         key, value = line.split(":", 1)
         key = key.strip().upper()
@@ -532,7 +419,9 @@ def parse_item_block(lines):
     effect_raw = data["EFFECT"]
 
     if ":" not in effect_raw:
-        raise InvalidDataFormatError(f"Invalid EFFECT format (missing colon): {effect_raw}")
+        raise InvalidDataFormatError(
+            f"Invalid EFFECT format (missing colon): {effect_raw}"
+        )
 
     stat_name, stat_value_str = effect_raw.split(":", 1)
     stat_name = stat_name.strip()
